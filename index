@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro Ancianos Hatillo San Sebastián</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @font-face {
+        font-family: 'LucideIcons';
+        src: url(https://cdn.jsdelivr.net/npm/lucide-static@latest/font/Lucide.ttf) format('truetype');
+      }
+      .lucide {
+        font-family: 'LucideIcons';
+        font-size: 1.1rem;
+        line-height: 1;
+        display: inline-block;
+        vertical-align: middle;
+        font-style: normal;
+        font-weight: normal;
+        font-variant: normal;
+        text-rendering: auto;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      /* Estilos para el mensaje flotante */
+      #message-box {
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 12px 24px;
+          border-radius: 8px;
+          color: white;
+          z-index: 1050;
+          opacity: 0;
+          transition: opacity 0.5s ease-in-out, bottom 0.5s ease-in-out;
+          font-family: 'Inter', sans-serif;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          max-width: 90%;
+          text-align: center;
+      }
+      #message-box.show {
+          opacity: 1;
+          bottom: 30px;
+      }
+      #message-box.success { background-color: #28a745; }
+      #message-box.error { background-color: #dc3545; }
+      #message-box.info { background-color: #17a2b8; }
+
+      /* Estilos para Modales */
+      .modal {
+          display: none;
+          position: fixed;
+          z-index: 1000;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          overflow: auto;
+          background-color: rgba(0,0,0,0.5);
+          align-items: center;
+          justify-content: center;
+      }
+      .modal.show { display: flex; }
+      .modal-content {
+          background-color: #fefefe;
+          margin: auto;
+          padding: 25px;
+          border: 1px solid #888;
+          width: 90%;
+          max-width: 500px;
+          border-radius: 8px;
+          box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+          position: relative;
+      }
+      .modal-close-btn {
+          position: absolute;
+          top: 10px;
+          right: 15px;
+          color: #aaa;
+          font-size: 28px;
+          font-weight: bold;
+          cursor: pointer;
+          line-height: 1;
+      }
+      .modal-close-btn:hover,
+      .modal-close-btn:focus {
+          color: black;
+          text-decoration: none;
+      }
+
+      /* Estilos para filas de inventario */
+      .inventory-item.low-stock {
+          background-color: #fff3cd;
+          border-left: 4px solid #ffc107;
+      }
+       .inventory-item.expired {
+          background-color: #f8d7da;
+          border-left: 4px solid #dc3545;
+          opacity: 0.8;
+      }
+       .inventory-item.needed {
+          border-right: 4px solid #17a2b8;
+      }
+
+      /* --- Estilos para Impresión --- */
+      @media print {
+        /* Ocultar todo por defecto excepto el cuerpo y el contenedor principal */
+        body * {
+          visibility: hidden;
+        }
+        /* Hacer visible solo el contenedor de la lista y su contenido */
+        #inventory-list-container, #inventory-list-container * {
+          visibility: visible;
+        }
+        /* Posicionar el contenedor de la lista para que ocupe la página */
+        #inventory-list-container {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          margin: 0;
+          padding: 0;
+          border: none;
+          box-shadow: none;
+        }
+        #inventory-list {
+          divide-y: initial; /* Quitar divisores si interfieren */
+          box-shadow: none;
+        }
+        /* Estilos para cada item en la impresión */
+        .inventory-item {
+           border: 1px solid #ccc !important; /* Borde simple para separar items */
+           border-left: none !important; /* Quitar bordes de estado */
+           border-right: none !important;
+           background-color: white !important; /* Fondo blanco */
+           opacity: 1 !important; /* Opacidad completa */
+           page-break-inside: avoid; /* Intentar no cortar items entre páginas */
+           padding: 8px !important; /* Reducir padding para impresión */
+           grid-template-columns: repeat(2, minmax(0, 1fr)); /* Ajustar columnas para impresión */
+        }
+        /* Ocultar los botones dentro de cada item */
+        .inventory-item .flex.flex-wrap.gap-2 {
+           display: none;
+        }
+        /* Ocultar elementos no deseados */
+        #add-product-form,
+        #controls-section, /* Contenedor de filtros y botón de imprimir */
+        .modal,
+        #message-box,
+        body > .container > h1, /* Título principal */
+        #inventory-list-container > h2 /* Título "Inventario Actual" */ {
+          display: none;
+        }
+        /* Asegurar que las columnas de nombre y cantidad se muestren */
+         .inventory-item > div:nth-child(1), /* Columna Nombre/Categoría */
+         .inventory-item > div:nth-child(2)  /* Columna Cantidades */
+         {
+            visibility: visible;
+            display: block; /* Asegurar que sean visibles */
+            grid-column: span 1 / span 1; /* Ocupar una columna */
+         }
+         /* Ajustar tamaño de fuente para impresión */
+         body {
+             font-size: 10pt;
+         }
+         h3 {
+             font-size: 11pt;
+         }
+         p {
+             font-size: 9pt;
+         }
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+    <div class="container mx-auto p-4 md:p-6 lg:p-8 max-w-6xl">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Centro Ancianos Hatillo San Sebastián</h1>
+
+        <div id="message-box"></div>
+
+        <div id="add-product-form-container" class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Agregar Nuevo Producto al Inventario</h2>
+            <form id="add-product-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <label for="product-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre:</label>
+                    <input type="text" id="product-name" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div>
+                    <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoría:</label>
+                    <input type="text" id="category" placeholder="Ej: Verduras, Lácteos" class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                 <div>
+                    <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">Cantidad Total:</label>
+                    <input type="number" id="quantity" min="0" step="any" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div>
+                    <label for="quantity-unit" class="block text-sm font-medium text-gray-700 mb-1">Unidad (ej: kg, bolsas):</label>
+                    <input type="text" id="quantity-unit" required class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div>
+                    <label for="items-per-unit" class="block text-sm font-medium text-gray-700 mb-1">Artículos/Unidad:</label>
+                    <input type="number" id="items-per-unit" min="1" required value="1" class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                 <div>
+                    <label for="expiry-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha Caducidad (Opc):</label>
+                    <input type="date" id="expiry-date" class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                 <div>
+                    <label for="low-stock-threshold" class="block text-sm font-medium text-gray-700 mb-1">Aviso Stock Bajo (Opc):</label>
+                    <input type="number" id="low-stock-threshold" min="0" placeholder="Umbral cantidad total" class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div class="md:col-span-2 lg:col-span-3">
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out flex items-center justify-center gap-2">
+                        <span class="lucide">&#xea11;</span> Agregar Producto
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="controls-section" class="bg-white p-4 rounded-lg shadow-md mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end mb-4">
+                <div>
+                    <label for="search-input" class="block text-sm font-medium text-gray-700 mb-1">Buscar por Nombre:</label>
+                    <input type="text" id="search-input" placeholder="Escribe para filtrar..." class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500">
+                </div>
+                 <div>
+                    <label for="filter-category" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Categoría:</label>
+                    <select id="filter-category" class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 bg-white">
+                        <option value="">Todas</option>
+                        </select>
+                </div>
+                <div>
+                    <label for="sort-by" class="block text-sm font-medium text-gray-700 mb-1">Ordenar por:</label>
+                    <select id="sort-by" class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 bg-white">
+                        <option value="name-asc">Nombre (A-Z)</option>
+                        <option value="name-desc">Nombre (Z-A)</option>
+                        <option value="quantity-asc">Cantidad (Menor a Mayor)</option>
+                        <option value="quantity-desc">Cantidad (Mayor a Menor)</option>
+                        <option value="expiry-asc">Caducidad (Más próxima)</option>
+                        <option value="expiry-desc">Caducidad (Más lejana)</option>
+                        <option value="category-asc">Categoría (A-Z)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-status" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Estado:</label>
+                    <select id="filter-status" class="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500 bg-white">
+                        <option value="">Todos</option>
+                        <option value="needed">Necesarios (Lista Compra)</option>
+                        <option value="low-stock">Stock Bajo</option>
+                        <option value="expired">Caducados</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex justify-center mt-4">
+                 <button id="print-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out flex items-center justify-center gap-2">
+                    <span class="lucide">&#xe9fe;</span> Imprimir Lista Actual
+                </button>
+            </div>
+        </div>
+
+         <div id="inventory-list-container" class="bg-white rounded-lg shadow-md overflow-hidden">
+             <h2 class="text-xl font-semibold p-4 bg-gray-50 border-b text-gray-800">Inventario Actual</h2>
+             <div id="inventory-list" class="divide-y divide-gray-200">
+                <p id="empty-message" class="p-6 text-gray-500 text-center hidden">El inventario está vacío o no hay coincidencias.</p>
+                </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-btn" onclick="closeModal('edit-modal')">&times;</span>
+            <h3 class="text-lg font-semibold mb-4">Editar Producto</h3>
+            <form id="edit-product-form">
+                <input type="hidden" id="edit-product-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="edit-product-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre:</label><input type="text" id="edit-product-name" required class="w-full p-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="edit-category" class="block text-sm font-medium text-gray-700 mb-1">Categoría:</label><input type="text" id="edit-category" class="w-full p-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="edit-quantity" class="block text-sm font-medium text-gray-700 mb-1">Cantidad Total:</label><input type="number" id="edit-quantity" min="0" step="any" required class="w-full p-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="edit-quantity-unit" class="block text-sm font-medium text-gray-700 mb-1">Unidad:</label><input type="text" id="edit-quantity-unit" required class="w-full p-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="edit-items-per-unit" class="block text-sm font-medium text-gray-700 mb-1">Artículos/Unidad:</label><input type="number" id="edit-items-per-unit" min="1" required class="w-full p-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="edit-current-items" class="block text-sm font-medium text-gray-700 mb-1">Artículos Actuales:</label><input type="number" id="edit-current-items" min="0" required class="w-full p-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="edit-expiry-date" class="block text-sm font-medium text-gray-700 mb-1">Fecha Caducidad:</label><input type="date" id="edit-expiry-date" class="w-full p-2 border border-gray-300 rounded-md"></div>
+                    <div><label for="edit-low-stock-threshold" class="block text-sm font-medium text-gray-700 mb-1">Aviso Stock Bajo:</label><input type="number" id="edit-low-stock-threshold" min="0" class="w-full p-2 border border-gray-300 rounded-md"></div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('edit-modal')" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out">Cancelar</button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="confirm-delete-modal" class="modal">
+         <div class="modal-content">
+            <span class="modal-close-btn" onclick="closeModal('confirm-delete-modal')">&times;</span>
+            <h3 class="text-lg font-semibold mb-4 text-red-600">Confirmar Eliminación</h3>
+            <p id="confirm-delete-message" class="mb-6">¿Estás seguro?</p>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeModal('confirm-delete-modal')" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out">Cancelar</button>
+                <button id="confirm-delete-btn" type="button" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out">Eliminar</button>
+            </div>
+        </div>
+    </div>
+     <div id="adjust-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close-btn" onclick="closeModal('adjust-modal')">&times;</span>
+            <h3 class="text-lg font-semibold mb-4">Ajustar Cantidad</h3>
+            <form id="adjust-quantity-form">
+                <input type="hidden" id="adjust-product-id">
+                <p class="mb-4">Ajustar para: <strong id="adjust-product-name"></strong></p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div><label for="adjust-quantity-change" class="block text-sm font-medium text-gray-700 mb-1">Cambio Cantidad Total:</label><input type="number" id="adjust-quantity-change" step="any" placeholder="Ej: 1, -0.5" class="w-full p-2 border border-gray-300 rounded-md"><p class="text-xs text-gray-500">Positivo añade, negativo quita.</p></div>
+                    <div><label for="adjust-items-change" class="block text-sm font-medium text-gray-700 mb-1">Cambio Artículos Actuales:</label><input type="number" id="adjust-items-change" step="1" placeholder="Ej: 5, -2" class="w-full p-2 border border-gray-300 rounded-md"><p class="text-xs text-gray-500">Positivo añade, negativo quita.</p></div>
+                </div>
+                 <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="closeModal('adjust-modal')" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out">Cancelar</button>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-150 ease-in-out">Aplicar Ajuste</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Selectores de Elementos ---
+        const addProductForm = document.getElementById('add-product-form');
+        const inventoryList = document.getElementById('inventory-list');
+        const searchInput = document.getElementById('search-input');
+        const filterCategorySelect = document.getElementById('filter-category');
+        const sortBySelect = document.getElementById('sort-by');
+        const filterStatusSelect = document.getElementById('filter-status');
+        const emptyMessage = document.getElementById('empty-message');
+        const messageBox = document.getElementById('message-box');
+        const printBtn = document.getElementById('print-btn'); // Selector para el nuevo botón
+
+        // Modales
+        const editModal = document.getElementById('edit-modal');
+        const confirmDeleteModal = document.getElementById('confirm-delete-modal');
+        const adjustModal = document.getElementById('adjust-modal');
+
+        // Formularios Modales
+        const editProductForm = document.getElementById('edit-product-form');
+        const adjustQuantityForm = document.getElementById('adjust-quantity-form');
+
+        // Botones Modales
+        const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+
+        // --- Estado Global ---
+        let messageTimeout;
+        let itemToDeleteId = null;
+        const today = new Date().toISOString().split('T')[0];
+
+        // --- Funciones de Utilidad ---
+        function showMessage(text, type = 'success', duration = 3500) {
+            messageBox.textContent = text;
+            messageBox.className = `show ${type}`;
+            if (messageTimeout) clearTimeout(messageTimeout);
+            messageTimeout = setTimeout(() => {
+                messageBox.className = messageBox.className.replace('show', '');
+            }, duration);
+        }
+
+        function getInventory() {
+            const inventory = localStorage.getItem('groceryInventoryAdv');
+            return inventory ? JSON.parse(inventory) : [];
+        }
+
+        function saveInventory(inventory) {
+            localStorage.setItem('groceryInventoryAdv', JSON.stringify(inventory));
+            populateCategoryFilter();
+            renderInventory();
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId)?.classList.add('show');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId)?.classList.remove('show');
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('show');
+            }
+        }
+
+        function populateCategoryFilter() {
+            const inventory = getInventory();
+            const categories = [...new Set(inventory.map(item => item.category).filter(Boolean))].sort();
+            const currentFilterValue = filterCategorySelect.value;
+            filterCategorySelect.innerHTML = '<option value="">Todas</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                filterCategorySelect.appendChild(option);
+            });
+            if (categories.includes(currentFilterValue)) {
+                filterCategorySelect.value = currentFilterValue;
+            }
+        }
+
+        // --- Lógica Principal del Inventario ---
+
+        function renderInventory() {
+            let inventory = getInventory();
+            inventoryList.innerHTML = ''; // Limpia la lista
+
+            // 1. Filtrar (sin cambios)
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedCategory = filterCategorySelect.value;
+            const selectedStatus = filterStatusSelect.value;
+
+            inventory = inventory.filter(item => {
+                const nameMatch = item.name.toLowerCase().includes(searchTerm);
+                const categoryMatch = !selectedCategory || item.category === selectedCategory;
+                let statusMatch = true;
+                if (selectedStatus) {
+                    switch (selectedStatus) {
+                        case 'needed': statusMatch = item.isNeeded === true; break;
+                        case 'low-stock':
+                            const threshold = item.lowStockThreshold !== null && !isNaN(parseFloat(item.lowStockThreshold)) ? parseFloat(item.lowStockThreshold) : null;
+                            statusMatch = threshold !== null && item.quantity <= threshold; break;
+                        case 'expired': statusMatch = item.expiryDate && item.expiryDate < today; break;
+                    }
+                }
+                return nameMatch && categoryMatch && statusMatch;
+            });
+
+            // 2. Ordenar (sin cambios)
+            const sortBy = sortBySelect.value;
+            inventory.sort((a, b) => {
+                 switch (sortBy) {
+                    case 'name-asc': return a.name.localeCompare(b.name);
+                    case 'name-desc': return b.name.localeCompare(a.name);
+                    case 'quantity-asc': return a.quantity - b.quantity;
+                    case 'quantity-desc': return b.quantity - a.quantity;
+                    case 'expiry-asc':
+                        if (!a.expiryDate && !b.expiryDate) return 0; if (!a.expiryDate) return 1; if (!b.expiryDate) return -1;
+                        return new Date(a.expiryDate) - new Date(b.expiryDate);
+                    case 'expiry-desc':
+                         if (!a.expiryDate && !b.expiryDate) return 0; if (!a.expiryDate) return 1; if (!b.expiryDate) return -1;
+                        return new Date(b.expiryDate) - new Date(a.expiryDate);
+                    case 'category-asc': return (a.category || '').localeCompare(b.category || '');
+                    default: return 0;
+                }
+            });
+
+            // 3. Mostrar (sin cambios en la lógica de datos, solo HTML)
+            if (inventory.length === 0) {
+                emptyMessage.classList.remove('hidden');
+                emptyMessage.textContent = "El inventario está vacío o no hay coincidencias con los filtros aplicados.";
+            } else {
+                emptyMessage.classList.add('hidden');
+                inventory.forEach(item => {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'inventory-item p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 items-start relative';
+                    itemElement.dataset.id = item.id;
+
+                    const isExpired = item.expiryDate && item.expiryDate < today;
+                    const threshold = item.lowStockThreshold !== null && !isNaN(parseFloat(item.lowStockThreshold)) ? parseFloat(item.lowStockThreshold) : null;
+                    const isLowStock = threshold !== null && item.quantity <= threshold;
+
+                    if (isExpired) itemElement.classList.add('expired');
+                    else if (isLowStock) itemElement.classList.add('low-stock');
+                    if (item.isNeeded) itemElement.classList.add('needed');
+
+                    let nameHtml = `<h3 class="text-lg font-semibold text-gray-900">${item.name}</h3>`;
+                    if (item.category) nameHtml += `<p class="text-sm text-gray-500 italic">${item.category}</p>`;
+                    if (isExpired) nameHtml += `<span class="text-xs font-bold text-red-600 block">CADUCADO</span>`;
+                    else if (isLowStock) nameHtml += `<span class="text-xs font-bold text-yellow-600 block">STOCK BAJO</span>`;
+
+                    let quantityHtml = `<p class="text-sm text-gray-700">Total: <span class="font-medium">${item.quantity}</span> ${item.quantityUnit}</p><p class="text-sm text-gray-700">Actual: <span class="font-medium">${item.currentItems}</span> / ${item.itemsPerUnit} por ${item.quantityUnit}</p>`;
+                    if (item.expiryDate) {
+                         const expiryDateObj = new Date(item.expiryDate + 'T00:00:00');
+                         const formattedDate = expiryDateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' });
+                         quantityHtml += `<p class="text-sm ${isExpired ? 'text-red-700 font-semibold' : 'text-gray-600'}">Caduca: ${formattedDate}</p>`;
+                    }
+
+                    const neededIcon = item.isNeeded ? '&#xea5b;' : '&#xea11;';
+                    const neededText = item.isNeeded ? 'Necesario' : 'Marcar';
+                    const neededTitle = item.isNeeded ? 'Quitar de Necesarios' : 'Marcar como Necesario';
+                    const neededBgClass = item.isNeeded ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-400 hover:bg-gray-500';
+
+                    const buttonsHtml = `
+                        <div class="flex flex-wrap gap-2 mt-2 md:mt-0 justify-start md:justify-end items-center col-span-1 md:col-span-1 lg:col-span-2">
+                            <button class="use-item-btn bg-blue-500 hover:bg-blue-600 text-white p-1 px-2 rounded-md text-xs transition duration-150 ease-in-out flex items-center gap-1" title="Usar un artículo"><span class="lucide">&#xe911;</span> Usar</button>
+                            <button class="adjust-item-btn bg-yellow-500 hover:bg-yellow-600 text-white p-1 px-2 rounded-md text-xs transition duration-150 ease-in-out flex items-center gap-1" title="Ajustar cantidad"><span class="lucide">&#xea73;</span> Ajustar</button>
+                            <button class="edit-item-btn bg-green-500 hover:bg-green-600 text-white p-1 px-2 rounded-md text-xs transition duration-150 ease-in-out flex items-center gap-1" title="Editar producto"><span class="lucide">&#xe9cb;</span> Editar</button>
+                            <button class="toggle-needed-btn ${neededBgClass} text-white p-1 px-2 rounded-md text-xs transition duration-150 ease-in-out flex items-center gap-1" title="${neededTitle}"><span class="lucide">${neededIcon}</span> ${neededText}</button>
+                            <button class="delete-item-btn bg-red-500 hover:bg-red-600 text-white p-1 px-2 rounded-md text-xs transition duration-150 ease-in-out flex items-center gap-1" title="Eliminar producto"><span class="lucide">&#xea0f;</span> Eliminar</button>
+                        </div>`;
+
+                    itemElement.innerHTML = `
+                        <div class="md:col-span-1 lg:col-span-1">${nameHtml}</div>
+                        <div class="md:col-span-1 lg:col-span-1">${quantityHtml}</div>
+                        ${buttonsHtml}
+                    `;
+                    inventoryList.appendChild(itemElement);
+                });
+            }
+            addEventListenersToButtons();
+        }
+
+        function addEventListenersToButtons() {
+            document.querySelectorAll('.inventory-item').forEach(itemRow => {
+                const id = itemRow.dataset.id;
+                const useBtn = itemRow.querySelector('.use-item-btn');
+                const adjustBtn = itemRow.querySelector('.adjust-item-btn');
+                const editBtn = itemRow.querySelector('.edit-item-btn');
+                const neededBtn = itemRow.querySelector('.toggle-needed-btn');
+                const deleteBtn = itemRow.querySelector('.delete-item-btn');
+
+                const cleanAndAddListener = (button, handler) => {
+                    if (!button) return;
+                    const cleanBtn = button.cloneNode(true);
+                    button.replaceWith(cleanBtn);
+                    cleanBtn.addEventListener('click', () => handler(id));
+                };
+
+                cleanAndAddListener(useBtn, handleUseItem);
+                cleanAndAddListener(adjustBtn, openAdjustModal);
+                cleanAndAddListener(editBtn, openEditModal);
+                cleanAndAddListener(neededBtn, handleToggleNeeded);
+                cleanAndAddListener(deleteBtn, openDeleteConfirmation);
+            });
+        }
+
+        // --- Manejadores de Eventos ---
+
+        // Agregar Producto (sin cambios)
+        addProductForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const inventory = getInventory();
+            const name = document.getElementById('product-name').value.trim();
+            const quantity = parseFloat(document.getElementById('quantity').value);
+            const quantityUnit = document.getElementById('quantity-unit').value.trim();
+            const itemsPerUnit = parseInt(document.getElementById('items-per-unit').value, 10);
+            const category = document.getElementById('category').value.trim();
+            const expiryDate = document.getElementById('expiry-date').value || null;
+            const lowStockThresholdInput = document.getElementById('low-stock-threshold').value;
+            const lowStockThreshold = lowStockThresholdInput ? parseFloat(lowStockThresholdInput) : null;
+
+            if (!name || !quantityUnit || isNaN(quantity) || quantity < 0 || isNaN(itemsPerUnit) || itemsPerUnit <= 0) {
+                showMessage('Por favor, completa los campos obligatorios (Nombre, Cantidad, Unidad, Artículos/Unidad) con valores válidos.', 'error'); return;
+            }
+            if (lowStockThreshold !== null && isNaN(lowStockThreshold)) {
+                 showMessage('El umbral de stock bajo debe ser un número.', 'error'); return;
+            }
+
+            const newItem = {
+                id: Date.now().toString(), name: name, category: category, quantity: quantity, quantityUnit: quantityUnit,
+                itemsPerUnit: itemsPerUnit, currentItems: Math.max(0, quantity * itemsPerUnit), expiryDate: expiryDate,
+                lowStockThreshold: lowStockThreshold, isNeeded: false
+            };
+            inventory.push(newItem);
+            saveInventory(inventory);
+            showMessage(`'${name}' agregado al inventario.`, 'success');
+            addProductForm.reset();
+        });
+
+        // Usar Artículo (sin cambios)
+        function handleUseItem(id) {
+            const inventory = getInventory();
+            const itemIndex = inventory.findIndex(item => item.id === id);
+            if (itemIndex === -1) return;
+            const item = inventory[itemIndex];
+            if (item.currentItems > 0) {
+                item.currentItems -= 1;
+                if (item.currentItems === 0 && item.quantity > 0) {
+                    item.quantity -= 1;
+                    if (item.quantity > 0) {
+                        item.currentItems = item.itemsPerUnit;
+                        showMessage(`Se usó un artículo de '${item.name}'. Se consumió una unidad completa. Quedan ${item.quantity} ${item.quantityUnit}.`, 'info');
+                    } else {
+                        showMessage(`Se usó el último artículo de '${item.name}'. Cantidad total agotada.`, 'info');
+                    }
+                } else if (item.currentItems === 0 && item.quantity === 0) {
+                     showMessage(`No quedan más artículos ni cantidad de '${item.name}'.`, 'error'); return;
+                } else {
+                     showMessage(`Se usó un artículo de '${item.name}'. Quedan ${item.currentItems}.`, 'info');
+                }
+                saveInventory(inventory);
+            } else {
+                 showMessage(`No quedan artículos individuales de '${item.name}' para usar. Considera ajustar la cantidad.`, 'error');
+            }
+        }
+
+        // Marcar/Desmarcar como Necesario (sin cambios)
+        function handleToggleNeeded(id) {
+             const inventory = getInventory();
+             const itemIndex = inventory.findIndex(item => item.id === id);
+             if (itemIndex === -1) return;
+             inventory[itemIndex].isNeeded = !inventory[itemIndex].isNeeded;
+             saveInventory(inventory);
+             showMessage(inventory[itemIndex].isNeeded ? `'${inventory[itemIndex].name}' marcado como necesario.` : `'${inventory[itemIndex].name}' quitado de necesarios.`, 'info');
+        }
+
+        // Abrir Modal de Edición (sin cambios)
+        function openEditModal(id) {
+            const inventory = getInventory();
+            const item = inventory.find(item => item.id === id);
+            if (!item) return;
+            document.getElementById('edit-product-id').value = item.id;
+            document.getElementById('edit-product-name').value = item.name;
+            document.getElementById('edit-category').value = item.category || '';
+            document.getElementById('edit-quantity').value = item.quantity;
+            document.getElementById('edit-quantity-unit').value = item.quantityUnit;
+            document.getElementById('edit-items-per-unit').value = item.itemsPerUnit;
+            document.getElementById('edit-current-items').value = item.currentItems;
+            document.getElementById('edit-expiry-date').value = item.expiryDate || '';
+            document.getElementById('edit-low-stock-threshold').value = item.lowStockThreshold !== null ? item.lowStockThreshold : '';
+            openModal('edit-modal');
+        }
+
+        // Guardar Edición (sin cambios)
+        editProductForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const id = document.getElementById('edit-product-id').value;
+            const inventory = getInventory();
+            const itemIndex = inventory.findIndex(item => item.id === id);
+            if (itemIndex === -1) return;
+
+            const name = document.getElementById('edit-product-name').value.trim();
+            const quantity = parseFloat(document.getElementById('edit-quantity').value);
+            const quantityUnit = document.getElementById('edit-quantity-unit').value.trim();
+            const itemsPerUnit = parseInt(document.getElementById('edit-items-per-unit').value, 10);
+            const currentItems = parseInt(document.getElementById('edit-current-items').value, 10);
+            const category = document.getElementById('edit-category').value.trim();
+            const expiryDate = document.getElementById('edit-expiry-date').value || null;
+            const lowStockThresholdInput = document.getElementById('edit-low-stock-threshold').value;
+            const lowStockThreshold = lowStockThresholdInput ? parseFloat(lowStockThresholdInput) : null;
+
+             if (!name || !quantityUnit || isNaN(quantity) || quantity < 0 || isNaN(itemsPerUnit) || itemsPerUnit <= 0 || isNaN(currentItems) || currentItems < 0) {
+                showMessage('Error: Revisa los campos numéricos y obligatorios.', 'error'); return;
+            }
+             if (lowStockThreshold !== null && isNaN(lowStockThreshold)) {
+                 showMessage('El umbral de stock bajo debe ser un número.', 'error'); return;
+             }
+             const maxPossibleItems = quantity * itemsPerUnit;
+             if (currentItems > maxPossibleItems) {
+                  showMessage(`Error: Los artículos actuales (${currentItems}) no pueden exceder el máximo posible (${maxPossibleItems}) para la cantidad total.`, 'error'); return;
+             }
+
+            inventory[itemIndex] = { ...inventory[itemIndex], name, category, quantity, quantityUnit, itemsPerUnit, currentItems, expiryDate, lowStockThreshold };
+            saveInventory(inventory);
+            closeModal('edit-modal');
+            showMessage(`'${name}' actualizado correctamente.`, 'success');
+        });
+
+        // Abrir Modal de Ajuste (sin cambios)
+        function openAdjustModal(id) {
+            const inventory = getInventory();
+            const item = inventory.find(item => item.id === id);
+            if (!item) return;
+            document.getElementById('adjust-product-id').value = item.id;
+            document.getElementById('adjust-product-name').textContent = item.name;
+            adjustQuantityForm.reset();
+            openModal('adjust-modal');
+        }
+
+        // Aplicar Ajuste de Cantidad (sin cambios)
+        adjustQuantityForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const id = document.getElementById('adjust-product-id').value;
+            const inventory = getInventory();
+            const itemIndex = inventory.findIndex(item => item.id === id);
+            if (itemIndex === -1) return;
+            const item = inventory[itemIndex];
+            const quantityChange = parseFloat(document.getElementById('adjust-quantity-change').value || 0);
+            const itemsChange = parseInt(document.getElementById('adjust-items-change').value || 0);
+
+            if (isNaN(quantityChange) || isNaN(itemsChange)) {
+                showMessage('Por favor, introduce valores numéricos para los ajustes.', 'error'); return;
+            }
+            const originalQuantity = item.quantity; const originalCurrentItems = item.currentItems;
+            let newQuantity = Math.max(0, originalQuantity + quantityChange);
+            let newCurrentItems = Math.max(0, originalCurrentItems + itemsChange);
+            const maxPossibleItems = newQuantity * item.itemsPerUnit;
+            if (newCurrentItems > maxPossibleItems) {
+                showMessage(`Error: El ajuste resultaría en ${newCurrentItems} artículos actuales, pero el máximo para ${newQuantity} ${item.quantityUnit} es ${maxPossibleItems}. Ajuste cancelado.`, 'error', 5000); return;
+            }
+             if (newQuantity === 0) newCurrentItems = 0;
+            item.quantity = newQuantity; item.currentItems = newCurrentItems;
+            saveInventory(inventory);
+            closeModal('adjust-modal');
+            showMessage(`Cantidad de '${item.name}' ajustada.`, 'success');
+        });
+
+        // Abrir Confirmación de Eliminación (sin cambios)
+        function openDeleteConfirmation(id) {
+            const inventory = getInventory();
+            const item = inventory.find(item => item.id === id);
+            if (!item) return;
+            itemToDeleteId = id;
+            document.getElementById('confirm-delete-message').textContent = `¿Estás seguro de que quieres eliminar '${item.name}' (${item.quantity} ${item.quantityUnit}) del inventario?`;
+            openModal('confirm-delete-modal');
+        }
+
+        // Confirmar Eliminación (sin cambios)
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (itemToDeleteId) {
+                let inventory = getInventory();
+                const itemIndex = inventory.findIndex(item => item.id === itemToDeleteId);
+                const itemName = itemIndex !== -1 ? inventory[itemIndex].name : 'Producto desconocido';
+                inventory = inventory.filter(item => item.id !== itemToDeleteId);
+                saveInventory(inventory);
+                closeModal('confirm-delete-modal');
+                showMessage(`'${itemName}' eliminado del inventario.`, 'success');
+                itemToDeleteId = null;
+            }
+        });
+
+        // --- NUEVO: Manejador para Imprimir ---
+        printBtn.addEventListener('click', () => {
+            showMessage('Preparando vista de impresión...', 'info', 2000);
+            // Pequeña demora para que el mensaje se muestre antes del diálogo de impresión
+            setTimeout(() => {
+                window.print();
+            }, 200);
+        });
+
+        // --- Event Listeners para Filtros y Ordenación (sin cambios) ---
+        searchInput.addEventListener('input', renderInventory);
+        filterCategorySelect.addEventListener('change', renderInventory);
+        sortBySelect.addEventListener('change', renderInventory);
+        filterStatusSelect.addEventListener('change', renderInventory);
+
+        // --- Inicialización ---
+        document.addEventListener('DOMContentLoaded', () => {
+             populateCategoryFilter();
+             renderInventory();
+        });
+
+    </script>
+
+</body>
+</html>
